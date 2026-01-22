@@ -25,7 +25,13 @@ class AboutListView(ListAPIView):
 
 
 class CheckupListView(ListAPIView):
-    queryset = Checkup.objects.filter(is_active=True).order_by('order', 'name_uz')
+    # ✅ MUHIM: tests/benefits chiqishi uchun prefetch
+    queryset = (
+        Checkup.objects
+        .filter(is_active=True)
+        .prefetch_related("tests", "benefits")
+        .order_by('order', 'name_uz')
+    )
     serializer_class = CheckupSerializer
 
 
@@ -37,6 +43,14 @@ class DoctorListView(ListAPIView):
 class SiteSettingsListView(ListAPIView):
     queryset = SiteSettings.objects.all().order_by('-id')
     serializer_class = SiteSettingsSerializer
+
+    # ✅ doim bitta object qaytaradi
+    def list(self, request, *args, **kwargs):
+        obj = self.get_queryset().first()
+        if not obj:
+            return Response({})
+        serializer = self.get_serializer(obj)
+        return Response(serializer.data)
 
 
 class ContentBlockListView(ListAPIView):
@@ -64,7 +78,6 @@ class ContactCreateView(CreateAPIView):
 
     def perform_create(self, serializer):
         obj = serializer.save()
-        # Send to Bitrix asynchronously? Here sync for simplicity
         send_lead(obj.name, obj.phone, obj.message)
 
 
@@ -74,7 +87,7 @@ class AdminStatsView(APIView):
     def get(self, request):
         now = timezone.now()
         since = now - timedelta(days=13)
-        # daily contacts last 14 days
+
         daily = (
             Contact.objects.filter(created_at__date__gte=since.date())
             .extra({'day': "date(created_at)"})
@@ -82,7 +95,7 @@ class AdminStatsView(APIView):
             .annotate(count=Count('id'))
             .order_by('day')
         )
-        # counts
+
         data = {
             'counts': {
                 'contacts': Contact.objects.count(),

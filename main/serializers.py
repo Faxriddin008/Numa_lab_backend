@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import (
-    Slider, About, Checkup, Doctor, Contact, ContentBlock, SiteSettings, SeoMeta
+    Slider, About, Checkup, CheckupTest, CheckupBenefit,
+    Doctor, Contact, ContentBlock, SiteSettings, SeoMeta
 )
 
 
@@ -16,10 +17,40 @@ class AboutSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+# ✅ NEW: Included Tests serializer
+class CheckupTestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CheckupTest
+        fields = ("id", "title_uz", "title_ru", "order")
+
+
+# ✅ NEW: Key Benefits serializer
+class CheckupBenefitSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CheckupBenefit
+        fields = ("id", "title_uz", "title_ru", "order")
+
+
 class CheckupSerializer(serializers.ModelSerializer):
+    # ✅ NEW: nested lists
+    tests = CheckupTestSerializer(many=True, read_only=True)
+    benefits = CheckupBenefitSerializer(many=True, read_only=True)
+
     class Meta:
         model = Checkup
-        fields = '__all__'
+        fields = (
+            "id",
+            "created_at", "updated_at",
+            "name_uz", "name_ru",
+            "description_uz", "description_ru",
+            "price", "currency",
+            "price_unit_uz", "price_unit_ru",
+            "duration_uz", "duration_ru",
+            "target_uz", "target_ru",
+            "icon",
+            "is_active", "order",
+            "tests", "benefits",
+        )
 
 
 class DoctorSerializer(serializers.ModelSerializer):
